@@ -1,0 +1,163 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+\usepackage{dsfont}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\title{ISE 403 Project}
+\author{Nichole Tsz-Ching Chow}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    Subgradient method is widely used for solving nonsmooth optimization problems. Its appliction widely spans various domains such as machine learning, signal processing, and operations research. In this paper, we review some recent advances in the convergence analysis of the subgradient method, focusing on its application to a wider range of nonsmooth optimization problems. We discuss various variants of the subgradient method and their convergence properties, highlighting key developments in the field. The paper aims to provide insights into the current state of research on the subgradient method and its potential applications in various domains.
+\end{abstract}
+
+\section{Introduction}
+The purpose of this paper is to introduce the subgradient method for nonsmooth optimization and go through some recent advances in it tackling wider range of nonsmooth optimziation problem and its convergence analysis. Recently, some break through as been made in subgradient methods in tracking weakly convex \cite{davis2019stochastic}, non-Lipschitz \cite{grimmer2025some} objective functions.
+Instead of conducting original research, we will provide a comprehensive review of the existing literature on the subgradient method, focusing on its convergence analysis.
+
+Subgradient method is one of the most fundamental algorithms for solving nonsmooth optimization problems. Subgradient method is first proposed by Shor et al. \cite{shor1962application, shor2012minimization} in the 1960s. Instead of using the gradient of the objective function, which may not exist at certain points of nonsmooth functions, it utilizes subgradients, which are generalized gradients that can be defined for nonsmooth functions. Similar to the gradient descent method for smooth optimization, the subgradient method iteratively updates the solution by moving in the direction of a subgradient, scaled by a step size. 
+There are various applications of subgradient methods in machine learning \cite{shalev2007pegasos,kivinen2004online, shalev2011online}, signal processing \cite{yamada2003adaptive}, and operations research \cite{nedic2009subgradient}.
+
+Despite its wide applicability, extending the scope of appliction of subgradient methods to more general nonsmooth optimization problems and improving its convergence has been a subject of extensive research. Unlike the gradient descent method which is a descent method, the subgradient method does not guarantee a monotonic decrease in the objective function value at each iteration \cite{polyak1977subgradient}. This makes the convergence analysis more challenging. Over the years, researchers have proposed various step size strategies and modifications to improve the convergence rate of the subgradient method. Recent advances in this area have led to a better understanding of the algorithm's behavior and its performance under different conditions.
+
+
+In this paper, we will discuss different variants of the subgradient method and their convergence properties, which tackle wider range of nonsmooth optimization problems. 
+The rest of the paper is organized as follows. In Section 2, we introduce the notations and preliminaries used in this paper. In Section 3, we review some recent advances in the convergence analysis of the subgradient method.
+
+\section{Notations and Preliminaries}
+\subsection{Notations}
+Throughout the paper, we represent scalars, vectors, and matrices using lowercase letters, bold lowercase letters, and uppercase letters, respectively. We use $\mathbb{R},~\mathbb{R}_+,~\mathbb{R}^n$, and $\mathbb{R}^{m \times n}$ to represent the set of real numbers, nonegative real numbers, $n$-dimensional real vectors, and $m\times n$ real matrices, respectively. For a real matrix $M \in \mathbb{R}^{m \times n}$, we denote $M^{\top}$ as the transpose of $M$. When $m=n$, the minimal and maximal eigenvalues of $M$ are represented as $\lambda_{\min}(M)$ and $\lambda_{\max}(M)$, respectively. 
+For a symmetric matrix $M$, $M\succeq 0$ means  $M$ is positive semidefinite (PSD).
+
+We use $\left \langle \cdot, \cdot \right \rangle$, and $\Vert \cdot \Vert$ to denote the inner product and norm induced from the inner product. 
+For an extended real-valued function $f$, the domain of $f$ is defined as ${\rm dom}(f):=\{{\bf x}\in\mathbb{R}^n\;|\;f({\bf x})<\infty\}$. A function $f$ is proper if $ {\rm dom}  f \neq \emptyset$ and $f({\bf x}) > -\infty$ for all $x \in  {\rm dom} (f)$, and is closed if it is lower semicontinuous, which is when ${\rm epi}(f)$ is closed, where ${\rm epi}(f):=\{({\bf x},t)\in\mathbb{R}^{n+1}\;|\;f({\bf x})\leq t\}$ is the epigraph of $f$.
+For any subset $S \subseteq \mathbb{R}^{n}$ and any point ${\bf x}\in \mathbb{R}^{n}$, the distance from ${\bf x}$ to $S$ is defined by ${\rm dist}({\bf x},S):= \inf\left\{\|{\bf y}-{\bf x}\|\; \big| \; {\bf y}\in S\right\}$, and ${\rm dist}({\bf x},S)=\infty$ when $S=\emptyset$.
+
+\subsection{Preliminaries of Nonsmooth Optimization}
+In this section, we will go through some fundamental knowledge on nonsmooth optimization. For a nonsmooth optimization problem, it can be strongly convex, convex, or nonconvex.
+
+\begin{definition}{\rm ({\bf Strong convexity})}
+    Let $\lambda>0$, a convex function $f$ is said to be $\lambda$-strongly convex over $\mathcal{X}$ if and only if $f({\bf y}) \geq f({\bf x}) + \left \langle \nabla f({\bf x}), {\bf y} - {\bf x}\right \rangle + \frac{\lambda}{2} \Vert {\bf y} - {\bf x}\Vert^2$ for all $({\bf x}, {\bf y}) \in \mathcal{X} \times \mathcal{X}_C$.
+\end{definition}
+
+
+Then, we will go through the key concept of subdifferentials, which is a generalized idea of gradient when the function $f \notin \mathcal{C}^1$.
+
+\begin{definition}{\rm ({\bf Subdifferentials}) \cite{attouch2013convergence, bolte2014proximal}} \label{def:subdifferentials} 
+For a proper and lower semicontinuous function  $f:\mathbb {R}^{n}\rightarrow (-\infty,\infty]$,
+\begin{itemize}
+\item[(i)] given ${\bf x}\in {\rm dom}(f)$, the Fr\'{e}chet subdifferential of $f$ at ${\bf x}$, expressed as $\widehat{\partial}f({\bf x})$, is the set of all vectors ${\bf u}\in \mathbb{R}^n$ satisfying\vspace{-0.05in}
+\begin{equation} \label{def:frechet}
+    \liminf_{{\bf y}\neq {\bf x}, {\bf y}\rightarrow {\bf x}}\frac{f({\bf y})-f({\bf x})-\langle {\bf u},{\bf y}-{\bf x}\rangle}{\|{\bf y}-{\bf x}\|}\geq0,\vspace{-0.05in}
+\end{equation}
+and we set $\widehat{\partial}f({\bf x}) = \emptyset$ when ${\bf x}\notin {\rm dom}(f)$.
+\vspace{0.2cm}
+\item[(ii)] (limiting-)subdifferential of $f$ at ${\bf x}$, written by $\partial f({\bf x})$, is defined by 
+\begin{equation}\label{pf}
+\partial f({\bf x}):=\{{\bf u}\in\mathbb{R}^n\; | \; \exists ~ {\bf x}^k\rightarrow {\bf x}, ~{\rm s.t.}~f({\bf x}^k)\rightarrow f({\bf x})
+ ~{\rm and}~ \widehat{\partial}f({\bf x}^k) \ni {\bf u}^k \rightarrow {\bf u} \}.  \end{equation}
+
+\item[(iii)] a point ${\bf x}^*$ is called (limiting-)critical point or stationary point of $f$ if it satisfies $0\in\partial f({\bf x}^*)$, and the set of critical points of $f$ is denoted by ${\rm crit} f$.
+\end{itemize}
+\end{definition}
+
+Note that \eqref{def:frechet} implies that the property $\widehat{\partial}f({\bf x})\subseteq \partial f({\bf x})$ immediately holds, and $\widehat{\partial}f({\bf x})$ is closed and convex, meanwhile $\partial f({\bf x})$ is closed \cite[Theorem 8.6]{rockafellar2009variational}. Also, the subdifferential \eqref{pf} reduces to the gradient of $f$ denoted by $\nabla f$ if $f$ is continuously differentiable. Moreover, as mentioned in \cite{rockafellar2009variational}, if $g$ is a continuously differentiable function, it holds that $\partial(f+g)=\partial f+\nabla g$. 
+
+In Section \ref{sec:literature}, we will also cover the projected algorithm, for which Euclidean projection is defined as follows
+
+\begin{definition} {\rm{\bf(Euclidean projection)}}
+    Let $\mathcal{X} \subseteq \mathbb{R}^n$ be a nonempty, closed, convex set. Then, the Euclidean projection of a point ${\bf x}$ onto $\mathcal{X}$ is defined as 
+    \[
+        P_X({\bf y}) = \argmin_{{\bf x} \in \mathcal{X}} \Vert {\bf y} -{\bf x}\Vert
+    \]
+\end{definition}
+
+
+\section{Literature Review} \label{sec:literature}
+\textbf{Subgradient Method.}
+Let $\mathcal{X}\subseteq \mathds{R}^n$ be a convex set and $f$ be a convex function with ${\rm dom}(f) \subseteq \mathcal{X}$.
+For the minimization problem
+\begin{equation} \label{eq:min}
+    \min_{{\bf x} \in \mathcal{X}} f({\bf x}),
+\end{equation}
+gradient descent is commonly applied when $f$ is smooth, meaning that its gradient is $L$-Lipschitz; that is,
+\begin{equation}
+    \left\| \nabla f(\mathbf{x}) - \nabla f(\mathbf{y}) \right\| \le L \left\| \mathbf{x} - \mathbf{y} \right\|, \quad \forall (\mathbf{x}, \mathbf{y}) \in \mathrm{dom}(f) \times \mathrm{dom}(f).
+\end{equation}
+
+When the objective function $f$ is nonsmooth, the gradient does not exist, and hence the subgradient of $f$ is computed instead of the gradient. 
+The set of subgradients of the function $f$ at a point ${\bf x}$, denoted as $\partial f({\bf x})$ is defined as
+\[
+    \partial f({\bf x}) = \{{\bf g}\in \mathbb{R}^n \text{ such that } f({\bf y}) \geq f({\bf x}) + \left \langle {\bf g}, {\bf y}-{\bf x} \right\rangle \}.
+\]
+For solving the minimization problem \eqref{eq:min}, the subgradient method was first proposed by Shor \cite{shor2012minimization} in the 1960s.
+The iterative scheme of the subgradient method first computes a subgradient ${\bf g} \in \partial f({\bf x}^k)$ and updates the next iterate ${\bf x}^{k+1}$ as follows
+\[
+    {\bf x}^{k+1} = {\bf x}^k - \alpha_k {\bf g}^k,
+\]
+where $\alpha_k$ is the stepsize for iteration $k$.
+It is commonly known that, the lower bound \cite[Theorem 3.2.1]{nesterov2018lectures} on the subgradient method with a $B$-Lipschitz continuous function $f$ is 
+\[
+    f({\bf x}^{k+1}) - f({\bf x}^*) \leq \frac{BR}{2(2 + \sqrt{k+1})},
+\]
+where ${\bf x}^*$ is the optimal solution and $\Vert {\bf x}^0 - {\bf x}^*\Vert \leq R$ for some $R>0$.
+
+% \begin{algorithm}[H]
+% \caption{Subgradient Descent}
+% \begin{algorithmic}[1]
+% \State \textbf{Input:} Convex function $f({\bf x})$ (possibly nonsmooth), initial point ${\bf x}_0$, step sizes $\alpha_k$
+% \For{$k = 0, 1, 2, \dots$}
+%     \State Choose any $g_k \in \partial f({\bf x}_k)$
+%     \State ${\bf x}_{k+1} = {\bf x}_k - \alpha_k g_k$
+% \EndFor
+% \end{algorithmic}
+% \end{algorithm}
+
+The subgradient method remains an active topic of research, as nonsmoothness is prevalent in modern machine learning tasks such as regression, classification, and matrix completion.
+
+
+\textbf{Kelley's Cutting-plane Method.}
+Recently, Drori and Teboulle \cite {drori2016optimal} were motivated by Kelley's cutting plane method \cite{kelley1960cutting, cheney1959newton}, which keeps a polyhedral model of the objective and updates it at each iteration using first-order information at the point predicted to minimize the objective. Their approach established a convergence rate of 
+\[
+    f({\bf x}^{k+1}) - f({\bf x}^*) \leq \frac{BR}{\sqrt{k+1}}.
+\]
+
+\textbf{Non-traditional Stepsize Scheme}
+Then, Jain et al. \cite{jain2021making} have further improved the convergence rate to $\mathcal{O}(\frac{1}{\sqrt{k}})$ with a non-standard step size scheme. They have proposed a modified step size scheme $(\alpha_t)^T_{t=1}$ as 
+\[
+    \alpha^t := 2^{-i} \gamma^t, \quad \forall T_i < t \leq T_{i+1}, \quad 0\leq i \leq k,
+\]
+where $(\gamma_t)^T_{t=1}$ is the subgradient descent stepsize sequence. 
+This ensures the step sizes eventually decay fast enough for the iterates to approach the optimum ${\bf x}^*$.
+However, their result holds only when the feasible set $\mathcal{X}$ is bounded. Their proposed method has a convergence rate of 
+\[
+    f({\bf x}^{k+1}) - f({\bf x}^*) \leq \frac{15BD}{\sqrt{k+1}}, 
+\]
+where $D= \max_{({\bf x}, {\bf y}) \in {\mathcal{X}} \times \mathcal{X}} \Vert {\bf x} - {\bf y}\Vert$. This is desirable compared to the methods mentioned above, as it provides an upper bound on the convergence rate of the subgradient method and establishes the rate even in the worst-case scenario.
+
+\textbf{Exact Convergence.} 
+Later, Zamani et al. \cite{zamani2025exact} have relaxed the limitation of compactness of domains $\mathcal{X}$ and derived a upper bound on the convergence rate of $f({\bf x}^k) - f({\bf x}^*) \leq \frac{BR}{\sqrt{k+1}}$ for the last iterate of the subgradient method with an easily satisfied requirement on step sizes. 
+This has significantly improved the convergence in Jain et al. \cite{jain2021making}.
+Their convergence analysis relies on the construction of a reference point ${\bf z}^k$ to have the quality $f({\bf x}^k) - f({\bf z}^{k-1})$ bounding the optimality gap $f({\bf x}^k) - f({\bf x}^*)$.
+After $k$ iterations, with their proposed step size, the last-iterate accuracy will be smaller than 
+\[
+\frac{BR}{\sqrt{B+1}} \sqrt{1+ \frac{\log(k)}{4}}.
+\]
+
+\section{Biography}
+Nichole Tsz-Ching Chow is a first-year Ph.D. student in the Department of Industrial and Systems Engineering at Lehigh University, focusing on nonconvex nonsmooth optimization with applications in machine learning. She has been awarded a Rossin/Parker Fellowship for 2025.
+She received her B.Sc. in Mathematics from the Chinese University of Hong Kong (CUHK) in 2023. During her undergraduate studies, she was awarded the prestigious Professor Charles K. Kao Research Exchange Scholarship to work as a research intern at the University of Tennessee under the supervision of Dr. Kwai Wong on large-scale parallel computing. She later completed an M.Phil. in Mathematics from CUHK in 2025, advised by Prof. Tieyong Zeng. 
+
+\bibliographystyle{plain} 
+\bibliography{references} 
+
+\end{document}
